@@ -1,32 +1,73 @@
 ---
 title: "Tarea_3_CarolinaHerrera_VictorVenegas_MonicaMagana_AndresVega_MiltonChamorro"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
 date: "2024-11-18"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+# Load necessary library for visualization
+library(ggplot2)
+library(reshape2)
+library(tidyverse)
+library(scales)
+library(caret)
+library(ROCR)
 ```
 
-## R Markdown
+# **Caso German Credit**
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Un banco alemán quiere disminuir el riesgo de un tipo de crédito que ofrece a las personas. Algunos de los clientes a los cuales se les ofrece el crédito cumplen sus obligaciones de pago oportunamente mientras que otros demoran en hacer los pagos o simplemente no los hacen. Una práctica muy usual en la industria bancaria es estimar modelos estadísticos para determinar la probabilidad de pago de los clientes en función de algunas características de estos. El modelo de regresión logística es uno de los modelos más usados para esto. Los modelos determinan la probabilidad de pago de cada cliente. A los clientes con alta probabilidad de pago se les otorga el crédito mientras que a los clientes con baja probabilidad de pago se les niega la posibilidad de acceder al crédito en ese banco.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Los ejecutivos del banco seleccionan una muestra de 1000 clientes a quienes se les ha otorgado el crédito en los últimos años y se tiene información si cumplieron esta obligación con el banco o no. Adicionalmente, se dispone de las siguientes variables demográficas y de transacciones de los clientes con el banco.
 
-```{r cars}
-summary(cars)
+1.	Age (numeric)
+
+2.	Sex (text: male, female)
+
+3.	Job (numeric: 0 - unskilled and non-resident, 1 - unskilled and resident, 2 - skilled, 3 - highly skilled)
+
+4.	Housing (text: own, rent, or free)
+
+5.	Saving accounts (text - little, moderate, quite rich, rich)
+
+6.	Checking account (numeric, in DM - Deutsch Mark)
+
+7.	Credit amount (numeric, in DM)
+
+8.	Duration (numeric, in month)
+
+9.	Purpose (text: car, furniture/equipment, radio/TV, domestic appliances, repairs, education, business, vacation/others)
+
+
+```{r}
+# Carga de datos
+# Andres
+# df_datos <- read.csv(file = 'german_credit_data.csv',header = T)
+# df_datos <- df_datos[1:11]
+
+# Víctor
+# ruta = '/Users/victorvenegaspezo/Documents/Magister Business Analytics/Modelos Analiticos/Modulo 3 Regresion Logistica/Tarea/german_credit_data.csv'
+
+# Mónica
+df_datos <- read.csv(file = 'german_credit_data.csv',header = T)
+
+
+
 ```
 
-## Including Plots
+## Sección A
 
-You can also embed plots, for example:
+Calcule estadísticas descriptivas de los datos y en base a estas determine potenciales observaciones inusuales.
+
 
 ```{r pressure, echo=FALSE}
 plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 
 
@@ -35,10 +76,24 @@ Note that the `echo = FALSE` parameter was added to the code chunk to prevent pr
 
 ---
 
-# Análisis de datos
+# Sección B
 
-Este es un informe generado con R Markdown.
+Estime el mejor modelo de regresión logística con los datos disponibles en base a los criterios: significancia estadística, AIC y BIC.
 
 ```{r}
 # Aquí va el código R que quieres ejecutar
 summary(cars)
+```
+
+
+
+
+
+
+
+---
+
+# Sección C
+Calcule las probabilidades del modelo y la matriz de confusión. Calcule indicadores de la calidad de las predicciones. Comente los resultados.
+
+```{r}
