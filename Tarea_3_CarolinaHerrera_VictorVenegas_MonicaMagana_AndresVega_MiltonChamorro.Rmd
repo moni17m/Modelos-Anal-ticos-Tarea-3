@@ -41,21 +41,48 @@ Los ejecutivos del banco seleccionan una muestra de 1000 clientes a quienes se l
 8.	Duration (numeric, in month)
 
 9.	Purpose (text: car, furniture/equipment, radio/TV, domestic appliances, repairs, education, business, vacation/others)
-
+ 
 
 ```{r}
 # Carga de datos
+
 # Andres
-# df_datos <- read.csv(file = 'german_credit_data.csv',header = T)
-# df_datos <- df_datos[1:11]
+# datos <- read.csv(file = 'german_credit_data.csv',header = T)
+# datos <- df_datos[1:11]
 
 # Víctor
 # ruta = '/Users/victorvenegaspezo/Documents/Magister Business Analytics/Modelos Analiticos/Modulo 3 Regresion Logistica/Tarea/german_credit_data.csv'
 
 # Mónica
-df_datos <- read.csv(file = 'german_credit_data.csv',header = T)
+datos <- read.csv(file = 'german_credit_data.csv',header = T)
+datos <- datos %>%
+  drop_na()
+colnames(datos)
+dim(datos)
+head(datos)
+summary(datos)
 
 
+```
+
+```{r}
+# Limpieza de datos
+datos <- datos %>%
+  mutate(Job = factor(Job,
+                      levels = c(0, 1, 2, 3),
+                      labels = c("unskilled and non-resident", 
+                                 "unskilled and resident", 
+                                 "skilled", 
+                                 "highly skilled")),
+         Sex = factor(Sex),
+         Housing = factor(Housing),
+         Saving.accounts = factor(Saving.accounts),
+         Checking.account = factor(Checking.account),
+         Purpose = factor(Purpose),
+         Good = factor(Good, 
+                       levels = c(0, 1), 
+                       labels = c("Not Good", "Good"))
+         )
 
 ```
 
@@ -64,8 +91,8 @@ df_datos <- read.csv(file = 'german_credit_data.csv',header = T)
 Calcule estadísticas descriptivas de los datos y en base a estas determine potenciales observaciones inusuales.
 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+
 ```
 
 
@@ -81,8 +108,7 @@ plot(pressure)
 Estime el mejor modelo de regresión logística con los datos disponibles en base a los criterios: significancia estadística, AIC y BIC.
 
 ```{r}
-# Aquí va el código R que quieres ejecutar
-summary(cars)
+
 ```
 
 
@@ -97,3 +123,5 @@ summary(cars)
 Calcule las probabilidades del modelo y la matriz de confusión. Calcule indicadores de la calidad de las predicciones. Comente los resultados.
 
 ```{r}
+
+```
