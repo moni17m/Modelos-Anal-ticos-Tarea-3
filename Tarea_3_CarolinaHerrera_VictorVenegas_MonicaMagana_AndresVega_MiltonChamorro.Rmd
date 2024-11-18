@@ -16,6 +16,7 @@ library(tidyverse)
 library(scales)
 library(caret)
 library(ROCR)
+library(dplyr)
 ```
 
 # **Caso German Credit** TEST
@@ -90,11 +91,260 @@ datos <- datos %>%
 
 Calcule estadísticas descriptivas de los datos y en base a estas determine potenciales observaciones inusuales.
 
-
 ```{r}
+skimr::skim(datos)
+
+# Convertir el conjunto de datos para visualización
+melted_data <- melt(data = datos %>% select(-Id), factorsAsStrings = T)
+
+# Boxplot para todas las variables numéricas
+ggplot(melted_data, aes(x = "", y = value)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 16) +
+  facet_wrap(~ variable, scales = "free") +
+  theme_minimal() +
+  labs(title = "Box Plots for Outlier Detection",
+       x = "Columns",
+       y = "Values") +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+# Detección de outliers usando el método IQR
+find_outliers <- function(column) {
+  Q1 <- quantile(column, 0.25, na.rm = TRUE)
+  Q3 <- quantile(column, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  lower_limit <- Q1 - 1.5 * IQR
+  upper_limit <- Q3 + 1.5 * IQR
+  outliers <- column[column < lower_limit | column > upper_limit]
+  
+  #print(paste0('Límite inferior: ', lower_limit, ' Límite superior: ', upper_limit))
+  return(outliers)
+}
+
+
+# Capturar outliers para todas las columnas numéricas
+outliers_list <- lapply(datos, function(col) {
+  if (is.numeric(col)) {
+    return(find_outliers(col))
+  } else {
+    return(NULL)
+  }
+})
+
+
+# Crear un data frame con los outliers encontrados
+outliers_dataset <- data.frame(
+  Column = names(outliers_list),
+  Outliers = sapply(outliers_list, function(x) paste(x, collapse = ", "))
+)
+
+# Filtrar y mostrar solo las columnas con outliers
+outliers_dataset <- outliers_dataset[outliers_dataset$Outliers != "", ]
+print(outliers_dataset)
+
+# Cantidad de outliers para cada variable
+print(paste('Cantidad de outliers para Age: ', length(outliers_list$Age)))
+print(paste('Cantidad de outliers para Credit.amount: ', length(outliers_list$Credit.amount)))
+print(paste('Cantidad de outliers para Duration: ', length(outliers_list$Duration)))
+
+
+
+### Gráficos de dispersion
+# Calcular los límites IQR para Age, Credit.amount y Duration
+age_limits <- quantile(datos$Age, c(0.25, 0.75), na.rm = TRUE)
+credit_amount_limits <- quantile(datos$Credit.amount, c(0.25, 0.75), na.rm = TRUE)
+duration_limits <- quantile(datos$Duration, c(0.25, 0.75), na.rm = TRUE)
+
+IQR_age <- age_limits[2] - age_limits[1]
+IQR_credit_amount <- credit_amount_limits[2] - credit_amount_limits[1]
+IQR_duration <- duration_limits[2] - duration_limits[1]
+
+# Calcular los límites de los outliers
+age_lower <- age_limits[1] - 1.5 * IQR_age
+age_upper <- age_limits[2] + 1.5 * IQR_age
+
+credit_amount_lower <- credit_amount_limits[1] - 1.5 * IQR_credit_amount
+credit_amount_upper <- credit_amount_limits[2] + 1.5 * IQR_credit_amount
+
+duration_lower <- duration_limits[1] - 1.5 * IQR_duration
+duration_upper <- duration_limits[2] + 1.5 * IQR_duration
+
+
+ggplot(datos, aes(x = Age, y = as.numeric(Good) - 1, color = Good)) +
+  geom_point(alpha = 0.5) +
+  geom_vline(xintercept = age_lower, color = "red", linetype = "dashed") +  # Línea para límite inferior
+  geom_vline(xintercept = age_upper, color = "red", linetype = "dashed") +  # Línea para límite superior
+  labs(title = "Age vs Good (1) / Not Good (0) with Outlier Limits",
+       x = "Age",
+       y = "Good (1) / Not Good (0)") +
+  scale_color_manual(values = c("red", "green")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+ggplot(datos, aes(x = Credit.amount, y = as.numeric(Good) - 1, color = Good)) +
+  geom_point(alpha = 0.5) +
+  geom_vline(xintercept = credit_amount_lower, color = "red", linetype = "dashed") +  # Línea para límite inferior
+  geom_vline(xintercept = credit_amount_upper, color = "red", linetype = "dashed") +  # Línea para límite superior
+  labs(title = "Credit Amount vs Good (1) / Not Good (0) with Outlier Limits",
+       x = "Credit Amount",
+       y = "Good (1) / Not Good (0)") +
+  scale_color_manual(values = c("red", "green")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+ggplot(datos, aes(x = Duration, y = as.numeric(Good) - 1, color = Good)) +
+  geom_point(alpha = 0.5) +
+  geom_vline(xintercept = duration_lower, color = "red", linetype = "dashed") +  # Línea para límite inferior
+  geom_vline(xintercept = duration_upper, color = "red", linetype = "dashed") +  # Línea para límite superior
+  labs(title = "Duration vs Good (1) / Not Good (0) with Outlier Limits",
+       x = "Duration (Months)",
+       y = "Good (1) / Not Good (0)") +
+  scale_color_manual(values = c("red", "green")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+
+
+
+### Analisis de correlación
+# 1. Cálculo de la matriz de correlación entre las variables numéricas
+
+# Seleccionar las variables numéricas
+numeric_vars <- datos %>% select(Age, Credit.amount, Duration)
+
+# Calcular la matriz de correlación
+correlation_matrix <- cor(numeric_vars, use = "complete.obs")  # usa complete.obs para ignorar NA
+
+# Ver la matriz de correlación
+print("Matriz de Correlación entre variables numéricas:")
+print(correlation_matrix)
+
+# 2. Visualización de la correlación con un mapa de calor (heatmap)
+# Convertir la matriz de correlación en formato largo para ggplot
+correlation_melted <- melt(correlation_matrix)
+
+# Visualizar la matriz de correlación usando ggplot2 (mapa de calor)
+ggplot(correlation_melted, aes(Var1, Var2, fill = value)) + 
+  geom_tile() + 
+  scale_fill_gradient2(low = "red", high = "green", mid = "white", midpoint = 0) +
+  theme_minimal() +
+  labs(title = "Matriz de Correlación entre Variables Numéricas", 
+       x = "Variables", y = "Variables") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Rotar etiquetas del eje X
+
+# 3. Análisis de la relación entre variables categóricas y la variable dependiente `Good`
+
+# Para cada variable categórica, se realiza la prueba de chi-cuadrado
+categorical_vars <- c("Sex", "Job", "Housing", "Saving.accounts", "Checking.account", "Purpose")
+
+# Recorremos las variables categóricas y realizamos la prueba de chi-cuadrado
+for (var in categorical_vars) {
+  cat("\nPrueba Chi-Cuadrado para la variable", var, "y Good:\n")
+  chisq_test <- chisq.test(table(datos[[var]], datos$Good))
+  print(chisq_test)
+}
+
+# 4. Análisis de la relación entre variables numéricas y la variable dependiente `Good`
+
+# Calcular la correlación de Pearson entre las variables numéricas y la variable 'Good'
+# Convertir 'Good' a numérica (0 = Not Good, 1 = Good)
+cor_age_good <- cor(datos$Age, as.numeric(datos$Good), use = "complete.obs")
+cor_credit_amount_good <- cor(datos$Credit.amount, as.numeric(datos$Good), use = "complete.obs")
+cor_duration_good <- cor(datos$Duration, as.numeric(datos$Good), use = "complete.obs")
+
+# Imprimir las correlaciones
+cat("\nCorrelación entre Age y Good:", cor_age_good, "\n")
+cat("Correlación entre Credit.amount y Good:", cor_credit_amount_good, "\n")
+cat("Correlación entre Duration y Good:", cor_duration_good, "\n")
+
+# 5. Visualización de la relación entre variables numéricas y Good
+
+# Gráficos de dispersión con la variable dependiente 'Good' para las variables numéricas
+
+# Gráfico de dispersión para Age vs Good
+ggplot(datos, aes(x = Age, y = as.numeric(Good) - 1, color = Good)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Age vs Good (1) / Not Good (0)", x = "Age", y = "Good (1) / Not Good (0)") +
+  scale_color_manual(values = c("red", "green")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Gráfico de dispersión para Credit.amount vs Good
+ggplot(datos, aes(x = Credit.amount, y = as.numeric(Good) - 1, color = Good)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Credit Amount vs Good (1) / Not Good (0)", x = "Credit Amount", y = "Good (1) / Not Good (0)") +
+  scale_color_manual(values = c("red", "green")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Gráfico de dispersión para Duration vs Good
+ggplot(datos, aes(x = Duration, y = as.numeric(Good) - 1, color = Good)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Duration vs Good (1) / Not Good (0)", x = "Duration (Months)", y = "Good (1) / Not Good (0)") +
+  scale_color_manual(values = c("red", "green")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+
+
+
 
 ```
 
+
+
+
+### Análisis de la sección A
+1) El data set original contenía 1000 observaciones. Anteriormente se habían eliminado las filas con algún valor faltante, quedando 522 filas únicamente
+
+2) Variables categóricas:
+* Sex: Dos categorías (mal: 354, fem: 168). Se observa una distribución desigual entre los géneros, con un número mucho mayor de observaciones para la categoría mal.
+
+* Job: Cuatro categorías, con una distribución desigual:
+ski: 313
+uns: 116
+hig: 79
+uns (que se repite): 14
+
+* Housing: Tres categorías (own, ren, fre), con una mayoría de own (349), seguido de ren (108) y fre (65).
+
+* Saving.accounts: Cuatro categorías (lit, mod, qui, ric), con una gran mayoría de registros en la categoría lit (412).
+
+* Checking.account: Tres categorías (lit, mod, ric), con una distribución más equilibrada entre lit (245) y mod (224), pero menos observaciones para ric (53).
+
+* Purpose: Ocho categorías, con car (173) y rad (132) como las más comunes, y las demás categorías con una frecuencia menor.
+
+* Good: Esta es la variable dependiente, con dos categorías (Goo para 291 observaciones y Not para 231). Representa el resultado de la variable objetivo, y las clases están relativamente balanceadas.
+
+3) Variables numéricas:
+* Age:
+Media: 34.89 años
+Desviación estándar: 11.79 años
+Rango: De 19 a 75 años 
+Distribución sesgada a la izquierda,con más observaciones concentradas en el rango de edad más bajo.
+
+* Credit.amount:
+Media: 3278.75 
+Desviación estándar: 2929.16 (lo que indica que hay bastante variabilidad en los montos de crédito)
+Rango: De 276 a 18,424. Hay valores extremos (outliers)
+Distribución sesgada a la izquierda, que sugiere que hay una mayor concentración de créditos de bajo monto.
+
+* Duration:
+Media: 21.34 meses
+Desviación estándar: 12.47 meses
+Rango: De 6 a 72 meses
+La distribución también muestra sesgo a la izquierda, con más observaciones en los rangos más bajos de duración.
+Los valores de duración más alta están presentes (hasta 72 meses), pero el rango es relativamente más limitado en comparación con otras variables.
+
+4) Outliers:
+
+* Edad: 23 outliers, por encima de 65 años de edad
+
+* Credit.amount: 72 outliers por encima de los 7882.375
+
+* Duration: 70 outliers por encima de 42 meses. Se observa que en este caso, los outliers corresponden solo al grupo Good=0. Por lo que una duración atipicamente alta podría estar relacionada con baja probabilidad de pago.
+
+Para todos los casos, parece ser que los outliers corresponden a solicitudes legítimas y no necesariamente a errores
 
 
 
