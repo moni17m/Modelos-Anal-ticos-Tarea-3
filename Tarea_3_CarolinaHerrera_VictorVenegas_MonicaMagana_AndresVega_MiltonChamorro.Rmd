@@ -18,7 +18,7 @@ library(caret)
 library(ROCR)
 ```
 
-# **Caso German Credit**
+# **Caso German Credit** TEST
 
 Un banco alemán quiere disminuir el riesgo de un tipo de crédito que ofrece a las personas. Algunos de los clientes a los cuales se les ofrece el crédito cumplen sus obligaciones de pago oportunamente mientras que otros demoran en hacer los pagos o simplemente no los hacen. Una práctica muy usual en la industria bancaria es estimar modelos estadísticos para determinar la probabilidad de pago de los clientes en función de algunas características de estos. El modelo de regresión logística es uno de los modelos más usados para esto. Los modelos determinan la probabilidad de pago de cada cliente. A los clientes con alta probabilidad de pago se les otorga el crédito mientras que a los clientes con baja probabilidad de pago se les niega la posibilidad de acceder al crédito en ese banco.
 
